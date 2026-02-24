@@ -10,7 +10,7 @@ export default function handler(req, res) {
 
   const db = JSON.parse(fs.readFileSync(dbPath, "utf-8"))
 
-  // 👇 lấy route từ query một cách an toàn
+  // Parse route parts
   const routeParts = []
   if (req.query.route) {
     if (Array.isArray(req.query.route)) {
@@ -30,43 +30,60 @@ export default function handler(req, res) {
   if (!db[resource]) {
     return res.status(404).json({
       message: "Resource not found",
-      availableKeys: Object.keys(db)
+      availableKeys: Object.keys(db),
     })
   }
 
-  const collection = db[resource]
+  let collection = db[resource]
 
   if (req.method === "GET") {
+    // Nếu có id trong path => trả 1 item
     if (id) {
-      const item = collection.find(item => String(item.id) === String(id))
+      const item = collection.find((item) => String(item.id) === String(id))
       return res.json(item ?? null)
     }
+
+    // Lọc theo query string (bỏ qua key "route")
+    const filters = { ...req.query }
+    delete filters.route
+
+    if (Object.keys(filters).length > 0) {
+      collection = collection.filter((item) =>
+        Object.entries(filters).every(([key, val]) => {
+          // Hỗ trợ boolean string
+          if (val === "true") return item[key] === true
+          if (val === "false") return item[key] === false
+          return String(item[key]) === String(val)
+        })
+      )
+    }
+
     return res.json(collection)
   }
 
+  // ⚠️ Vercel dùng read-only filesystem — write sẽ không persist
+  // Nhưng vẫn trả response hợp lệ để app không crash
+
   if (req.method === "POST") {
-    const newItem = { ...req.body, id: Date.now().toString() }
-    db[resource].push(newItem)
-    fs.writeFileSync(dbPath, JSON.stringify(db, null, 2))
+    const newItem = {
+      ...req.body,
+      id: req.body.id || Date.now().toString(),
+    }
+    // Không thể ghi file trên Vercel — trả về item như đã tạo
     return res.status(201).json(newItem)
   }
 
   if (req.method === "PUT") {
-    const idx = collection.findIndex(item => String(item.id) === String(id))
-    if (idx === -1) return res.status(404).json(null)
-
-    collection[idx] = { ...req.body, id }
-    fs.writeFileSync(dbPath, JSON.stringify(db, null, 2))
-    return res.json(collection[idx])
+    const item = collection.find((item) => String(item.id) === String(id))
+    if (!item) return res.status(404).json(null)
+    const updated = { ...req.body, id }
+    return res.json(updated)
   }
 
   if (req.method === "DELETE") {
-    const idx = collection.findIndex(item => String(item.id) === String(id))
-    if (idx === -1) return res.status(404).json(null)
-
-    const [deleted] = collection.splice(idx, 1)
-    fs.writeFileSync(dbPath, JSON.stringify(db, null, 2))
-    return res.json(deleted)
+    const item = collection.find((item) => String(item.id) === String(id))
+    if (!item) return res.status(404).json(null)
+    return res.json(item)
   }
 
   return res.status(405).json({ message: "Method not allowed" })
