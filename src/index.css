@@ -1,0 +1,176 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Google Fonts ── */
+
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    @apply bg-brand-cream text-brand-ink font-body antialiased;
+    font-size: 14px;
+    cursor: none;
+  }
+
+  ::selection { @apply bg-brand-ink text-brand-cream; }
+
+  ::-webkit-scrollbar { width: 3px; }
+  ::-webkit-scrollbar-track { @apply bg-brand-paper; }
+  ::-webkit-scrollbar-thumb { @apply bg-brand-warm; }
+  ::-webkit-scrollbar-thumb:hover { @apply bg-brand-muted; }
+
+  h1, h2, h3, h4 {
+    @apply font-display font-normal;
+    line-height: 1.1;
+  }
+}
+
+@layer components {
+
+  /* ── Buttons ── */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2
+           bg-brand-ink text-brand-cream font-body font-medium
+           text-xs tracking-wide uppercase
+           px-6 py-3
+           transition-all duration-300 ease-out
+           hover:bg-brand-red;
+  }
+
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2
+           border border-brand-ink text-brand-ink font-body font-medium
+           text-xs tracking-wide uppercase
+           px-6 py-3
+           transition-all duration-300 ease-out
+           hover:bg-brand-ink hover:text-brand-cream;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2
+           text-brand-mid font-body font-medium
+           text-xs tracking-wide uppercase
+           px-4 py-2
+           transition-colors duration-200
+           hover:text-brand-ink;
+  }
+
+  .btn-red {
+    @apply inline-flex items-center justify-center gap-2
+           bg-brand-red text-white font-body font-medium
+           text-xs tracking-wide uppercase
+           px-6 py-3
+           transition-all duration-300 ease-out
+           hover:bg-brand-ink;
+  }
+
+  /* ── Form inputs ── */
+  .input-field {
+    @apply w-full bg-brand-paper border-0 border-b border-brand-stone
+           text-brand-ink placeholder-brand-muted
+           font-body text-sm font-light
+           px-0 py-3
+           focus:outline-none focus:border-brand-ink
+           transition-colors duration-200;
+  }
+
+  .input-field-box {
+    @apply w-full bg-white border border-brand-stone
+           text-brand-ink placeholder-brand-muted
+           font-body text-sm
+           px-4 py-3
+           focus:outline-none focus:border-brand-ink
+           transition-colors duration-200;
+  }
+
+  /* ── Label ── */
+  .field-label {
+    @apply block text-2xs font-mono text-brand-muted tracking-wider uppercase mb-2;
+  }
+
+  /* ── Tags ── */
+  .tag {
+    @apply inline-block border border-brand-stone text-brand-mid
+           text-2xs font-mono px-3 py-1 tracking-open;
+  }
+
+  .tag-red {
+    @apply inline-block bg-brand-redLight text-brand-red
+           text-2xs font-mono px-3 py-1 tracking-open;
+  }
+
+  /* ── Section label ── */
+  .section-eyebrow {
+    @apply text-2xs font-mono text-brand-muted tracking-wider uppercase;
+  }
+
+  /* ── Divider ── */
+  .divider { @apply border-t border-brand-stone; }
+}
+
+/* ── Custom cursor ── */
+.cursor {
+  width: 8px;
+  height: 8px;
+  background: #2C2A27;
+  border-radius: 50%;
+  position: fixed;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%, -50%);
+  transition: transform 0.1s ease, background 0.2s;
+}
+
+.cursor-follower {
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(44, 42, 39, 0.25);
+  border-radius: 50%;
+  position: fixed;
+  pointer-events: none;
+  z-index: 9998;
+  transform: translate(-50%, -50%);
+  transition: transform 0.3s ease, width 0.2s, height 0.2s, border-color 0.2s;
+}
+
+.cursor.hover {
+  transform: translate(-50%, -50%) scale(2.5);
+  background: #C0392B;
+}
+
+.cursor-follower.hover {
+  width: 44px;
+  height: 44px;
+  border-color: rgba(192, 57, 43, 0.2);
+}
+
+/* ── Page transitions ── */
+.page-enter        { opacity: 0; transform: translateY(8px); }
+.page-enter-active { opacity: 1; transform: translateY(0); transition: opacity 0.35s, transform 0.35s; }
+
+/* ── Product grid gap color ── */
+.product-grid-gap {
+  background: #E8E6E0;
+}
+
+/* ── No scrollbar ── */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ── Skeleton ── */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #E8E6E0 25%, #F4F3EF 50%, #E8E6E0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+
+/* ── Hero text on dark bg ── */
+.hero-section { background-color: #1A1814; }
