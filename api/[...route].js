@@ -10,8 +10,8 @@ export default function handler(req, res) {
 
   // Thử nhiều đường dẫn khác nhau để tìm database.json
   const possiblePaths = [
-    path.join(process.cwd(), "database.json"),
-    path.join(process.cwd(), "..", "database.json"),
+    path.join(process.cwd(), "/database.json"),
+    path.join(process.cwd(), "..", "/database.json"),
     "/var/task/database.json",
     path.join(fileURLToPath(new URL(".", import.meta.url)), "..", "database.json"),
     path.join(fileURLToPath(new URL(".", import.meta.url)), "../../database.json"),
