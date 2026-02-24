@@ -28,7 +28,7 @@ export default function ProductCard({ product, index = 0 }) {
       className="group bg-brand-paper border-r border-b border-brand-stone"
     >
       <Link
-        to={`/product/${product?.slug || ''}`}
+        to={`/products/${product?.slug || ''}`}
         className="block relative overflow-hidden aspect-[3/4]"
       >
         <img
