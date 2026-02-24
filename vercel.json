@@ -4,7 +4,8 @@
   "outputDirectory": "dist",
   "functions": {
     "api/[...route].js": {
-      "runtime": "nodejs20.x"
+      "runtime": "nodejs20.x",
+      "includeFiles": "database.json"
     }
   },
   "routes": [

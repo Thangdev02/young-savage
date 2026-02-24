@@ -2,19 +2,36 @@ import fs from "fs"
 import path from "path"
 import { fileURLToPath } from "url"
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
-
 export default function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*")
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS")
   res.setHeader("Access-Control-Allow-Headers", "Content-Type")
   if (req.method === "OPTIONS") return res.status(200).end()
 
-  const dbPath = path.join(process.cwd(), "database.json")
+  // Thử nhiều đường dẫn khác nhau để tìm database.json
+  const possiblePaths = [
+    path.join(process.cwd(), "database.json"),
+    path.join(process.cwd(), "..", "database.json"),
+    "/var/task/database.json",
+    path.join(fileURLToPath(new URL(".", import.meta.url)), "..", "database.json"),
+    path.join(fileURLToPath(new URL(".", import.meta.url)), "../../database.json"),
+  ]
 
-  if (!fs.existsSync(dbPath)) {
-    return res.status(500).json({ message: "database.json not found", cwd: process.cwd() })
+  let dbPath = null
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) {
+      dbPath = p
+      break
+    }
+  }
+
+  if (!dbPath) {
+    return res.status(500).json({
+      message: "database.json not found",
+      tried: possiblePaths,
+      cwd: process.cwd(),
+      __dirname: fileURLToPath(new URL(".", import.meta.url)),
+    })
   }
 
   const db = JSON.parse(fs.readFileSync(dbPath, "utf-8"))
