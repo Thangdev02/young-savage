@@ -1,6 +1,5 @@
 import axios from 'axios'
 
-
 const api = axios.create({
   baseURL: '/api',
   headers: { 'Content-Type': 'application/json' }
@@ -12,8 +11,10 @@ export const getProducts = async () => {
 }
 
 export const getProduct = async (slug) => {
-  const res = await api.get(`/products?slug=${slug}`)
-  return res.data[0] || null
+  // Lấy tất cả rồi filter client-side — tránh phụ thuộc query string filter
+  const res = await api.get('/products')
+  const all = Array.isArray(res.data) ? res.data : []
+  return all.find(p => p.slug === slug) || null
 }
 
 export const getProductById = async (id) => {
@@ -33,19 +34,21 @@ export const createProduct = async (data) => {
 
 // Users / Auth
 export const loginUser = async (email, password) => {
-  const res = await api.get(`/users?email=${email}&password=${password}`)
-  return res.data[0] || null
+  const res = await api.get('/users')
+  const all = Array.isArray(res.data) ? res.data : []
+  return all.find(u => u.email === email && u.password === password) || null
 }
 
 export const registerUser = async (data) => {
-  const existing = await api.get(`/users?email=${data.email}`)
-  if (existing.data.length > 0) throw new Error('Email đã được sử dụng')
-  const res = await api.post('/users', {
+  const res = await api.get('/users')
+  const all = Array.isArray(res.data) ? res.data : []
+  if (all.find(u => u.email === data.email)) throw new Error('Email đã được sử dụng')
+  const newUser = await api.post('/users', {
     ...data,
     role: 'customer',
     createdAt: new Date().toISOString()
   })
-  return res.data
+  return newUser.data
 }
 
 export const getUsers = async () => {
@@ -70,13 +73,19 @@ export const createOrder = async (data) => {
 }
 
 export const getOrders = async (params = {}) => {
-  const res = await api.get('/orders', { params })
-  return res.data
+  const res = await api.get('/orders')
+  let orders = Array.isArray(res.data) ? res.data : []
+  // Filter client-side nếu có params
+  Object.entries(params).forEach(([key, val]) => {
+    orders = orders.filter(o => String(o[key]) === String(val))
+  })
+  return orders
 }
 
 export const getOrdersByUser = async (userId) => {
-  const res = await api.get(`/orders?userId=${userId}`)
-  return res.data
+  const res = await api.get('/orders')
+  const all = Array.isArray(res.data) ? res.data : []
+  return all.filter(o => o.userId === userId)
 }
 
 export const updateOrder = async (id, data) => {
@@ -86,8 +95,9 @@ export const updateOrder = async (id, data) => {
 
 // Coupons
 export const validateCoupon = async (code) => {
-  const res = await api.get(`/coupons?code=${code}&active=true`)
-  return res.data[0] || null
+  const res = await api.get('/coupons')
+  const all = Array.isArray(res.data) ? res.data : []
+  return all.find(c => c.code === code && c.active === true) || null
 }
 
 // Categories
