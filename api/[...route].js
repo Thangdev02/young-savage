@@ -5,7 +5,9 @@ export default function handler(req, res) {
   const dbPath = path.join(process.cwd(), 'database.json')
   const db = JSON.parse(fs.readFileSync(dbPath, 'utf-8'))
 
-  const { route = [] } = req.query
+const rawRoute = req.query.route || []
+const route = Array.isArray(rawRoute) ? rawRoute : [rawRoute]
+
   const [resource, id] = route
 
   if (!db[resource]) {
