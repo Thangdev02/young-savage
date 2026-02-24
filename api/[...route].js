@@ -1,62 +1,60 @@
 import fs from "fs"
 import path from "path"
+import { fileURLToPath } from "url"
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 export default function handler(req, res) {
+  res.setHeader("Access-Control-Allow-Origin", "*")
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS")
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type")
+  if (req.method === "OPTIONS") return res.status(200).end()
+
   const dbPath = path.join(process.cwd(), "database.json")
 
   if (!fs.existsSync(dbPath)) {
-    return res.status(500).json({ message: "database.json not found" })
+    return res.status(500).json({ message: "database.json not found", cwd: process.cwd() })
   }
 
   const db = JSON.parse(fs.readFileSync(dbPath, "utf-8"))
 
-  // Parse route parts — Vercel passes catch-all as array or string in req.query.route
-  const routeParts = []
-  const rawRoute = req.query.route
-  if (Array.isArray(rawRoute)) {
-    routeParts.push(...rawRoute)
-  } else if (typeof rawRoute === "string") {
-    routeParts.push(...rawRoute.split("/").filter(Boolean))
-  } else {
-    // Fallback: parse from req.url directly
-    const urlPath = req.url.replace(/\?.*$/, "")
-    const parts = urlPath.replace(/^\/api\//, "").split("/").filter(Boolean)
-    routeParts.push(...parts)
-  }
-
-  const resource = routeParts[0]
-  const id = routeParts[1]
+  // Parse resource và id từ URL
+  const urlPath = req.url.split("?")[0]
+  const parts = urlPath.replace(/^\/api\//, "").split("/").filter(Boolean)
+  const resource = parts[0]
+  const id = parts[1]
 
   if (!resource) {
-    return res.status(400).json({ message: "Resource not specified", url: req.url, query: req.query })
+    return res.status(400).json({ message: "Resource not specified", url: req.url })
   }
 
   if (!db[resource]) {
     return res.status(404).json({
       message: "Resource not found",
       resource,
-      routeParts,
       availableKeys: Object.keys(db),
     })
   }
 
-  let collection = db[resource]
+  let collection = [...db[resource]]
 
   if (req.method === "GET") {
-    // Nếu có id trong path => trả 1 item
     if (id) {
       const item = collection.find((item) => String(item.id) === String(id))
       return res.json(item ?? null)
     }
 
-    // Lọc theo query string (bỏ qua key "route")
-    const filters = { ...req.query }
-    delete filters.route
+    // Filter theo query params
+    const url = new URL(req.url, "http://localhost")
+    const filters = {}
+    url.searchParams.forEach((val, key) => {
+      if (key !== "route") filters[key] = val
+    })
 
     if (Object.keys(filters).length > 0) {
       collection = collection.filter((item) =>
         Object.entries(filters).every(([key, val]) => {
-          // Hỗ trợ boolean string
           if (val === "true") return item[key] === true
           if (val === "false") return item[key] === false
           return String(item[key]) === String(val)
@@ -67,23 +65,15 @@ export default function handler(req, res) {
     return res.json(collection)
   }
 
-  // ⚠️ Vercel dùng read-only filesystem — write sẽ không persist
-  // Nhưng vẫn trả response hợp lệ để app không crash
-
   if (req.method === "POST") {
-    const newItem = {
-      ...req.body,
-      id: req.body.id || Date.now().toString(),
-    }
-    // Không thể ghi file trên Vercel — trả về item như đã tạo
+    const newItem = { ...req.body, id: req.body?.id || Date.now().toString() }
     return res.status(201).json(newItem)
   }
 
   if (req.method === "PUT") {
     const item = collection.find((item) => String(item.id) === String(id))
     if (!item) return res.status(404).json(null)
-    const updated = { ...req.body, id }
-    return res.json(updated)
+    return res.json({ ...req.body, id })
   }
 
   if (req.method === "DELETE") {
