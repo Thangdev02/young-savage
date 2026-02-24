@@ -10,26 +10,32 @@ export default function handler(req, res) {
 
   const db = JSON.parse(fs.readFileSync(dbPath, "utf-8"))
 
-  // Parse route parts
+  // Parse route parts — Vercel passes catch-all as array or string in req.query.route
   const routeParts = []
-  if (req.query.route) {
-    if (Array.isArray(req.query.route)) {
-      routeParts.push(...req.query.route)
-    } else {
-      routeParts.push(req.query.route)
-    }
+  const rawRoute = req.query.route
+  if (Array.isArray(rawRoute)) {
+    routeParts.push(...rawRoute)
+  } else if (typeof rawRoute === "string") {
+    routeParts.push(...rawRoute.split("/").filter(Boolean))
+  } else {
+    // Fallback: parse from req.url directly
+    const urlPath = req.url.replace(/\?.*$/, "")
+    const parts = urlPath.replace(/^\/api\//, "").split("/").filter(Boolean)
+    routeParts.push(...parts)
   }
 
   const resource = routeParts[0]
   const id = routeParts[1]
 
   if (!resource) {
-    return res.status(400).json({ message: "Resource not specified" })
+    return res.status(400).json({ message: "Resource not specified", url: req.url, query: req.query })
   }
 
   if (!db[resource]) {
     return res.status(404).json({
       message: "Resource not found",
+      resource,
+      routeParts,
       availableKeys: Object.keys(db),
     })
   }
