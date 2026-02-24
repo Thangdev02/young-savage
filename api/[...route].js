@@ -1,56 +1,66 @@
-import fs from 'fs'
-import path from 'path'
+import fs from "fs";
+import path from "path";
 
 export default function handler(req, res) {
-  const dbPath = path.join(process.cwd(), 'database.json')
-  const db = JSON.parse(fs.readFileSync(dbPath, 'utf-8'))
+  const dbPath = path.join(process.cwd(), "database.json");
 
-const rawRoute = req.query.route || []
-const route = Array.isArray(rawRoute) ? rawRoute : [rawRoute]
+  if (!fs.existsSync(dbPath)) {
+    return res.status(500).json({ message: "database.json not found" });
+  }
 
-  const [resource, id] = route
+  const db = JSON.parse(fs.readFileSync(dbPath, "utf-8"));
+
+  const rawRoute = req.query.route || [];
+  const route = Array.isArray(rawRoute) ? rawRoute : [rawRoute];
+  const [resource, id] = route;
 
   if (!db[resource]) {
-    return res.status(404).json({ message: 'Not found' })
+    return res.status(404).json({
+      message: "Resource not found",
+      availableKeys: Object.keys(db)
+    });
   }
 
-if (req.method === 'GET') {
-  let data = db[resource]
+  let data = db[resource];
 
-  if (id) {
-    const item = data.find(i => i.id == id)
-    return res.json(item || null)
+  // ================= GET =================
+  if (req.method === "GET") {
+    if (id) {
+      return res.json(data.find(i => i.id == id) || null);
+    }
+    return res.json(data);
   }
 
-  // Support query params như json-server
-  const query = req.query
-  delete query.route
+  // ================= POST =================
+  if (req.method === "POST") {
+    const newItem = { ...req.body, id: Date.now().toString() };
+    db[resource].push(newItem);
 
-  const keys = Object.keys(query)
-  if (keys.length > 0) {
-    data = data.filter(item =>
-      keys.every(key => item[key] == query[key])
-    )
+    fs.writeFileSync(dbPath, JSON.stringify(db, null, 2));
+    return res.status(201).json(newItem);
   }
 
-  return res.json(data)
-}
+  // ================= PUT =================
+  if (req.method === "PUT") {
+    const index = db[resource].findIndex(i => i.id == id);
+    if (index === -1) return res.status(404).json(null);
 
-  if (req.method === 'POST') {
-    const newItem = { ...req.body, id: Date.now() }
-    db[resource].push(newItem)
-    fs.writeFileSync(dbPath, JSON.stringify(db, null, 2))
-    return res.json(newItem)
+    db[resource][index] = { ...req.body, id };
+    fs.writeFileSync(dbPath, JSON.stringify(db, null, 2));
+
+    return res.json(db[resource][index]);
   }
 
-  if (req.method === 'PUT') {
-    const index = db[resource].findIndex(i => i.id == id)
-    if (index === -1) return res.status(404).json(null)
+  // ================= DELETE =================
+  if (req.method === "DELETE") {
+    const index = db[resource].findIndex(i => i.id == id);
+    if (index === -1) return res.status(404).json(null);
 
-    db[resource][index] = req.body
-    fs.writeFileSync(dbPath, JSON.stringify(db, null, 2))
-    return res.json(db[resource][index])
+    const deleted = db[resource].splice(index, 1);
+    fs.writeFileSync(dbPath, JSON.stringify(db, null, 2));
+
+    return res.json(deleted[0]);
   }
 
-  return res.status(405).json({ message: 'Method not allowed' })
+  return res.status(405).json({ message: "Method not allowed" });
 }
