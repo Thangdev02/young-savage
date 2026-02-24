@@ -2,48 +2,51 @@ import fs from "fs"
 import path from "path"
 import { fileURLToPath } from "url"
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
+// Đọc database.json — thử từ nhiều vị trí
+function loadDB() {
+  const candidates = [
+    path.resolve(__dirname, "../database.json"),
+    path.resolve(__dirname, "../../database.json"),
+    path.resolve(process.cwd(), "database.json"),
+  ]
+  for (const p of candidates) {
+    try {
+      const raw = fs.readFileSync(p, "utf-8")
+      const db = JSON.parse(raw)
+      // Kiểm tra db có data thật không
+      if (db && typeof db === "object" && Object.keys(db).length > 0) {
+        return { db, source: p }
+      }
+    } catch {}
+  }
+  return { db: null, source: null }
+}
+
 export default function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*")
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS")
   res.setHeader("Access-Control-Allow-Headers", "Content-Type")
   if (req.method === "OPTIONS") return res.status(200).end()
 
-  // Thử nhiều đường dẫn khác nhau để tìm database.json
-  const possiblePaths = [
-    path.join(process.cwd(), "/database.json"),
-    path.join(process.cwd(), "..", "/database.json"),
-    "/var/task/database.json",
-    path.join(fileURLToPath(new URL(".", import.meta.url)), "..", "database.json"),
-    path.join(fileURLToPath(new URL(".", import.meta.url)), "../../database.json"),
-  ]
+  const { db, source } = loadDB()
 
-  let dbPath = null
-  for (const p of possiblePaths) {
-    if (fs.existsSync(p)) {
-      dbPath = p
-      break
-    }
-  }
-
-  if (!dbPath) {
+  if (!db) {
     return res.status(500).json({
       message: "database.json not found",
-      tried: possiblePaths,
+      __dirname,
       cwd: process.cwd(),
-      __dirname: fileURLToPath(new URL(".", import.meta.url)),
     })
   }
 
-  const db = JSON.parse(fs.readFileSync(dbPath, "utf-8"))
-
-  // Parse resource và id từ URL
   const urlPath = req.url.split("?")[0]
   const parts = urlPath.replace(/^\/api\//, "").split("/").filter(Boolean)
   const resource = parts[0]
   const id = parts[1]
 
   if (!resource) {
-    return res.status(400).json({ message: "Resource not specified", url: req.url })
+    return res.status(400).json({ message: "Resource not specified" })
   }
 
   if (!db[resource]) {
@@ -51,6 +54,7 @@ export default function handler(req, res) {
       message: "Resource not found",
       resource,
       availableKeys: Object.keys(db),
+      source,
     })
   }
 
@@ -62,11 +66,10 @@ export default function handler(req, res) {
       return res.json(item ?? null)
     }
 
-    // Filter theo query params
     const url = new URL(req.url, "http://localhost")
     const filters = {}
     url.searchParams.forEach((val, key) => {
-      if (key !== "route") filters[key] = val
+      if (key !== "route" && key !== "path") filters[key] = val
     })
 
     if (Object.keys(filters).length > 0) {

@@ -2,11 +2,6 @@
   "version": 2,
   "buildCommand": "vite build",
   "outputDirectory": "dist",
-  "functions": {
-    "api/[...route].js": {
-      "includeFiles": "database.json"
-    }
-  },
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api/[...route].js" },
     { "source": "/((?!assets/).*)", "destination": "/index.html" }
